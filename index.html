@@ -326,7 +326,8 @@
             grid-row: 3;
         }
 
-        @media (hover: none) and (pointer: coarse) {
+        @media (hover: none) and (pointer: coarse),
+        (max-width: 900px) {
             #dpad {
                 display: grid;
             }
@@ -621,6 +622,12 @@
         });
 
         // D-Pad Handling
+        // Force show D-Pad if touch is detected via JS
+        if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+            document.getElementById('dpad').style.display = 'grid';
+            document.getElementById('controls-hint').style.display = 'none';
+        }
+
         document.querySelectorAll('.dpad-btn').forEach(btn => {
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
