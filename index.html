@@ -539,7 +539,8 @@
         });
 
         function handleKeyInput(e) {
-            if (e.code === 'Space') {
+            if (e.code === 'Space' || e.key === ' ') {
+                e.preventDefault();
                 togglePause();
                 return;
             }
@@ -623,7 +624,7 @@
         }
 
         function update(currentTime) {
-            if (isPaused || isGameOver) return;
+            if (!gameStarted || isPaused || isGameOver) return;
 
             const deltaTime = currentTime - lastTime;
             if (deltaTime < gameSpeed) return;
@@ -771,6 +772,7 @@
         document.getElementById('quit-btn').addEventListener('click', () => {
             isPaused = false;
             gameStarted = false;
+            isGameOver = true; // Stop the loop
             pauseScreen.classList.remove('active');
             startScreen.classList.add('active');
             // Clear canvas
