@@ -935,15 +935,15 @@
             if (velocity.x === 0 && velocity.y === 0) return;
 
             // Move Snake
-            const head = { x: snake[0].x + velocity.x, y: snake[0].y + velocity.y };
+            let head = { x: snake[0].x + velocity.x, y: snake[0].y + velocity.y };
 
-            // Collision with Walls
-            if (head.x < 0 || head.x >= TILE_COUNT_X || head.y < 0 || head.y >= TILE_COUNT_Y) {
-                gameOver();
-                return;
-            }
+            // Wrap around walls instead of collision
+            if (head.x < 0) head.x = TILE_COUNT_X - 1;
+            if (head.x >= TILE_COUNT_X) head.x = 0;
+            if (head.y < 0) head.y = TILE_COUNT_Y - 1;
+            if (head.y >= TILE_COUNT_Y) head.y = 0;
 
-            // Collision with Self
+            // Collision with Self only
             if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
                 gameOver();
                 return;
@@ -1123,7 +1123,7 @@
         const musicBtn = document.getElementById('music-toggle');
         musicBtn.addEventListener('click', () => {
             const musicOn = audio.toggleMusic();
-            musicBtn.innerText = musicOn ? '🎵' : '🔇';
+            musicBtn.innerText = musicOn ? '🎵' : '🎶';
             musicBtn.style.opacity = musicOn ? '1' : '0.5';
         });
 
