@@ -360,6 +360,50 @@
                 display: none;
             }
         }
+
+        /* Milestone Celebration */
+        #milestone-celebration {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        #milestone-celebration.active {
+            display: flex;
+        }
+
+        .milestone-message {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            padding: 2rem 3rem;
+            border-radius: 20px;
+            font-size: 2rem;
+            font-weight: bold;
+            color: #000;
+            text-align: center;
+            box-shadow: 0 0 40px rgba(0, 243, 255, 0.8);
+            animation: celebrate 0.5s ease-out;
+        }
+
+        @keyframes celebrate {
+            0% {
+                transform: scale(0) rotate(0deg);
+            }
+
+            50% {
+                transform: scale(1.2) rotate(5deg);
+            }
+
+            100% {
+                transform: scale(1) rotate(0deg);
+            }
+        }
     </style>
 </head>
 
@@ -418,6 +462,11 @@
                 <button class="btn" id="restart-btn">Try Again</button>
             </div>
         </div>
+
+        <!-- Milestone Celebration -->
+        <div id="milestone-celebration">
+            <div class="milestone-message" id="milestone-message"></div>
+        </div>
     </div>
 
     <div id="dpad">
@@ -438,12 +487,77 @@
                 this.masterGain = this.ctx.createGain();
                 this.masterGain.connect(this.ctx.destination);
                 this.masterGain.gain.value = 0.3;
+
+                // Background music
+                this.bgMusicGain = this.ctx.createGain();
+                this.bgMusicGain.connect(this.masterGain);
+                this.bgMusicGain.gain.value = 0.15; // Quieter than SFX
+                this.bgMusicPlaying = false;
+                this.bgOscillators = [];
             }
 
             toggle() {
                 this.enabled = !this.enabled;
                 this.masterGain.gain.value = this.enabled ? 0.3 : 0;
                 return this.enabled;
+            }
+
+            startBackgroundMusic() {
+                if (this.bgMusicPlaying) return;
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+
+                this.bgMusicPlaying = true;
+
+                // Simple looping melody with chords
+                const playMusicLoop = () => {
+                    if (!this.bgMusicPlaying) return;
+
+                    // Chord progression: Am, F, C, G
+                    const chords = [
+                        [220, 264, 330],  // Am (A, C, E)
+                        [174.6, 220, 261.6], // F (F, A, C)
+                        [261.6, 329.6, 392], // C (C, E, G)
+                        [196, 246.9, 293.7]  // G (G, B, D)
+                    ];
+
+                    let chordIndex = 0;
+
+                    const playChord = () => {
+                        if (!this.bgMusicPlaying) return;
+
+                        const chord = chords[chordIndex % chords.length];
+
+                        // Play each note in the chord
+                        chord.forEach(freq => {
+                            const osc = this.ctx.createOscillator();
+                            const gain = this.ctx.createGain();
+
+                            osc.type = 'sine';
+                            osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+
+                            gain.gain.setValueAtTime(0, this.ctx.currentTime);
+                            gain.gain.linearRampToValueAtTime(0.1, this.ctx.currentTime + 0.1);
+                            gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 2);
+
+                            osc.connect(gain);
+                            gain.connect(this.bgMusicGain);
+
+                            osc.start();
+                            osc.stop(this.ctx.currentTime + 2);
+                        });
+
+                        chordIndex++;
+                        setTimeout(playChord, 2000); // Every 2 seconds
+                    };
+
+                    playChord();
+                };
+
+                playMusicLoop();
+            }
+
+            stopBackgroundMusic() {
+                this.bgMusicPlaying = false;
             }
 
             playTone(freq, type, duration, fadeOut = true) {
@@ -729,8 +843,8 @@
                 { x: startX - 1, y: startY },
                 { x: startX - 2, y: startY }
             ];
-            velocity = { x: 1, y: 0 };
-            nextVelocity = { x: 1, y: 0 };
+            velocity = { x: 0, y: 0 };
+            nextVelocity = { x: 0, y: 0 };
             score = 0;
             scoreEl.innerText = score;
             spawnFood();
@@ -743,6 +857,9 @@
             startScreen.classList.remove('active');
             pauseScreen.classList.remove('active');
             gameOverScreen.classList.remove('active');
+
+            // Start background music
+            audio.startBackgroundMusic();
 
             requestAnimationFrame(gameLoop);
         }
@@ -802,8 +919,16 @@
             // Eat Food
             if (head.x === food.x && head.y === food.y) {
                 const points = food.type === 'special' ? 50 : 10;
+                const oldScore = score;
                 score += points;
                 scoreEl.innerText = score;
+
+                // Check for milestone achievement (300, 600, 900, etc.)
+                const milestones = [300, 600, 900, 1200, 1500];
+                const hitMilestone = milestones.find(m => oldScore < m && score >= m);
+                if (hitMilestone) {
+                    showMilestoneCelebration(hitMilestone);
+                }
 
                 // Speed up slightly every 50 points
                 if (score % 50 === 0 && gameSpeed > 40) {
@@ -822,6 +947,33 @@
             } else {
                 snake.pop();
             }
+        }
+
+        function showMilestoneCelebration(milestone) {
+            const celebrationEl = document.getElementById('milestone-celebration');
+            const messageEl = document.getElementById('milestone-message');
+
+            const messages = [
+                `🎉 ${milestone} POINTS! 🎉`,
+                `⭐ MILESTONE REACHED! ⭐`,
+                `🏆 ${milestone} POINTS! 🏆`,
+                `✨ AMAZING! ${milestone}! ✨`
+            ];
+
+            messageEl.innerText = messages[Math.floor(Math.random() * messages.length)];
+            celebrationEl.classList.add('active');
+
+            // Create extra particles for celebration
+            for (let i = 0; i < 30; i++) {
+                const randomX = Math.floor(Math.random() * TILE_COUNT_X);
+                const randomY = Math.floor(Math.random() * TILE_COUNT_Y);
+                createParticles(randomX, randomY, Math.random() > 0.5 ? COLORS.foodSpecial : COLORS.snakeHead);
+            }
+
+            // Hide after 2 seconds
+            setTimeout(() => {
+                celebrationEl.classList.remove('active');
+            }, 2000);
         }
 
         function draw() {
@@ -882,6 +1034,7 @@
 
         function gameOver() {
             isGameOver = true;
+            audio.stopBackgroundMusic();
             audio.playGameOver();
 
             if (score > highScore) {
