@@ -232,6 +232,30 @@
             background: rgba(255, 255, 255, 0.1);
         }
 
+        #pause-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            z-index: 20;
+            color: var(--text-color);
+            transition: all 0.3s;
+            pointer-events: all;
+            font-size: 1.2rem;
+        }
+
+        #pause-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
         /* Difficulty Selector */
         .difficulty-select {
             display: flex;
@@ -341,6 +365,7 @@
 
 <body>
 
+    <div id="pause-btn">⏸</div>
     <div id="sound-toggle">🔊</div>
 
     <div id="game-container">
@@ -900,6 +925,11 @@
             startScreen.classList.add('active');
             // Clear canvas
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+        });
+
+        document.getElementById('pause-btn').addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent focus issues
+            togglePause();
         });
 
         soundBtn.addEventListener('click', () => {
