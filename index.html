@@ -899,6 +899,9 @@
             // Update velocity
             velocity = { ...nextVelocity };
 
+            // Don't move if velocity is still 0 (waiting for first input)
+            if (velocity.x === 0 && velocity.y === 0) return;
+
             // Move Snake
             const head = { x: snake[0].x + velocity.x, y: snake[0].y + velocity.y };
 
