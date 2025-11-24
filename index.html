@@ -40,13 +40,12 @@
 
         #game-container {
             position: relative;
-            width: 100%;
-            max-width: 600px;
-            aspect-ratio: 1;
+            width: 100vw;
+            height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 20px;
+            overflow: hidden;
         }
 
         canvas {
@@ -446,7 +445,8 @@
 
         // Constants
         const GRID_SIZE = 20;
-        let TILE_COUNT = 20; // Will be calculated based on canvas size
+        let TILE_COUNT_X = 20;
+        let TILE_COUNT_Y = 20;
 
         // Game State
         let snake = [];
@@ -475,16 +475,27 @@
 
         // Initialization
         function resize() {
-            // Make canvas responsive but keep it square-ish and grid aligned
+            // Make canvas fill the screen while maintaining grid alignment
             const container = document.getElementById('game-container');
-            let size = Math.min(container.clientWidth, window.innerHeight * 0.7);
-            if (size < 300 || isNaN(size)) size = 300; // Minimum size fallback
 
-            size = Math.floor(size / GRID_SIZE) * GRID_SIZE;
+            // Calculate max possible size that fits in window
+            // Leave a small margin for UI elements if needed, or go full bleed
+            // Let's go almost full bleed but keep it square for classic feel, or rectangular?
+            // User asked for "Full Screen", usually implies filling the viewport.
+            // But Snake is grid based. If we make it rectangular, we need to handle different X and Y tile counts.
 
-            canvas.width = size;
-            canvas.height = size;
-            TILE_COUNT = size / GRID_SIZE;
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+
+            // Calculate columns and rows
+            const cols = Math.floor(w / GRID_SIZE);
+            const rows = Math.floor(h / GRID_SIZE);
+
+            canvas.width = cols * GRID_SIZE;
+            canvas.height = rows * GRID_SIZE;
+
+            TILE_COUNT_X = cols;
+            TILE_COUNT_Y = rows;
         }
 
         window.addEventListener('resize', resize);
@@ -562,8 +573,8 @@
         // Game Functions
         function initGame() {
             resize(); // Ensure size is correct
-            const startX = Math.floor(TILE_COUNT / 2);
-            const startY = Math.floor(TILE_COUNT / 2);
+            const startX = Math.floor(TILE_COUNT_X / 2);
+            const startY = Math.floor(TILE_COUNT_Y / 2);
             snake = [
                 { x: startX, y: startY },
                 { x: startX - 1, y: startY },
@@ -590,8 +601,8 @@
         function spawnFood() {
             let valid = false;
             while (!valid) {
-                food.x = Math.floor(Math.random() * TILE_COUNT);
-                food.y = Math.floor(Math.random() * TILE_COUNT);
+                food.x = Math.floor(Math.random() * TILE_COUNT_X);
+                food.y = Math.floor(Math.random() * TILE_COUNT_Y);
 
                 // Check if food spawns on snake
                 valid = !snake.some(segment => segment.x === food.x && segment.y === food.y);
@@ -626,7 +637,7 @@
             const head = { x: snake[0].x + velocity.x, y: snake[0].y + velocity.y };
 
             // Collision with Walls
-            if (head.x < 0 || head.x >= TILE_COUNT || head.y < 0 || head.y >= TILE_COUNT) {
+            if (head.x < 0 || head.x >= TILE_COUNT_X || head.y < 0 || head.y >= TILE_COUNT_Y) {
                 gameOver();
                 return;
             }
@@ -668,22 +679,6 @@
             // Clear Canvas
             ctx.fillStyle = 'rgba(10, 10, 18, 0.6)'; // Trail effect
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            // Draw Grid (Optional, subtle)
-            /*
-            ctx.strokeStyle = COLORS.grid;
-            ctx.lineWidth = 0.5;
-            for (let i = 0; i < TILE_COUNT; i++) {
-                ctx.beginPath();
-                ctx.moveTo(i * GRID_SIZE, 0);
-                ctx.lineTo(i * GRID_SIZE, canvas.height);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.moveTo(0, i * GRID_SIZE);
-                ctx.lineTo(canvas.width, i * GRID_SIZE);
-                ctx.stroke();
-            }
-            */
 
             // Draw Food
             const foodX = food.x * GRID_SIZE + GRID_SIZE / 2;
