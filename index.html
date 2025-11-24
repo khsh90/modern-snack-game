@@ -271,6 +271,70 @@
                 padding: 10px;
             }
         }
+
+        /* D-Pad */
+        #dpad {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 150px;
+            height: 150px;
+            display: none;
+            /* Hidden by default, shown on touch */
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 5px;
+            z-index: 20;
+            opacity: 0.6;
+        }
+
+        .dpad-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            color: white;
+            cursor: pointer;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .dpad-btn:active {
+            background: rgba(0, 243, 255, 0.3);
+        }
+
+        .dpad-up {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        .dpad-left {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        .dpad-right {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        .dpad-down {
+            grid-column: 2;
+            grid-row: 3;
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            #dpad {
+                display: grid;
+            }
+
+            #controls-hint {
+                display: none;
+            }
+        }
     </style>
 </head>
 
@@ -328,6 +392,13 @@
                 <button class="btn" id="restart-btn">Try Again</button>
             </div>
         </div>
+    </div>
+
+    <div id="dpad">
+        <div class="dpad-btn dpad-up" data-key="ArrowUp">▲</div>
+        <div class="dpad-btn dpad-left" data-key="ArrowLeft">◀</div>
+        <div class="dpad-btn dpad-right" data-key="ArrowRight">▶</div>
+        <div class="dpad-btn dpad-down" data-key="ArrowDown">▼</div>
     </div>
 
     <div id="controls-hint">Press SPACE to Pause</div>
@@ -515,28 +586,73 @@
             e.preventDefault();
         }, { passive: false });
 
-        canvas.addEventListener('touchmove', e => e.preventDefault(), { passive: false });
-
-        canvas.addEventListener('touchend', e => {
+        canvas.addEventListener('touchmove', e => {
+            e.preventDefault();
             if (!gameStarted || isPaused || isGameOver) return;
 
-            const touchEndX = e.changedTouches[0].screenX;
-            const touchEndY = e.changedTouches[0].screenY;
+            const touchX = e.changedTouches[0].screenX;
+            const touchY = e.changedTouches[0].screenY;
 
-            const dx = touchEndX - touchStartX;
-            const dy = touchEndY - touchStartY;
+            const dx = touchX - touchStartX;
+            const dy = touchY - touchStartY;
 
-            if (Math.abs(dx) > Math.abs(dy)) {
-                // Horizontal
-                if (dx > 0 && velocity.x === 0) nextVelocity = { x: 1, y: 0 };
-                else if (dx < 0 && velocity.x === 0) nextVelocity = { x: -1, y: 0 };
-            } else {
-                // Vertical
-                if (dy > 0 && velocity.y === 0) nextVelocity = { x: 0, y: 1 };
-                else if (dy < 0 && velocity.y === 0) nextVelocity = { x: 0, y: -1 };
+            // Threshold for swipe detection
+            if (Math.abs(dx) > 30 || Math.abs(dy) > 30) {
+                if (Math.abs(dx) > Math.abs(dy)) {
+                    // Horizontal
+                    if (dx > 0) handleDirection('ArrowRight');
+                    else handleDirection('ArrowLeft');
+                } else {
+                    // Vertical
+                    if (dy > 0) handleDirection('ArrowDown');
+                    else handleDirection('ArrowUp');
+                }
+
+                // Reset start to current to allow continuous swiping or prevent multiple triggers
+                touchStartX = touchX;
+                touchStartY = touchY;
             }
-            e.preventDefault();
+        }, { passive: false });
+
+        canvas.addEventListener('touchend', e => {
+            // Reset touch start to prevent sticky swipes
+            touchStartX = 0;
+            touchStartY = 0;
         });
+
+        // D-Pad Handling
+        document.querySelectorAll('.dpad-btn').forEach(btn => {
+            btn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const key = btn.dataset.key;
+                handleDirection(key);
+            });
+            // Also support click for testing on desktop if needed
+            btn.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const key = btn.dataset.key;
+                handleDirection(key);
+            });
+        });
+
+        function handleDirection(key) {
+            if (!gameStarted || isPaused || isGameOver) return;
+
+            switch (key) {
+                case 'ArrowUp':
+                    if (velocity.y === 0) nextVelocity = { x: 0, y: -1 };
+                    break;
+                case 'ArrowDown':
+                    if (velocity.y === 0) nextVelocity = { x: 0, y: 1 };
+                    break;
+                case 'ArrowLeft':
+                    if (velocity.x === 0) nextVelocity = { x: -1, y: 0 };
+                    break;
+                case 'ArrowRight':
+                    if (velocity.x === 0) nextVelocity = { x: 1, y: 0 };
+                    break;
+            }
+        }
 
         function handleKeyInput(e) {
             if (e.code === 'Space' || e.key === ' ') {
@@ -551,22 +667,22 @@
                 case 'ArrowUp':
                 case 'w':
                 case 'W':
-                    if (velocity.y === 0) nextVelocity = { x: 0, y: -1 };
+                    handleDirection('ArrowUp');
                     break;
                 case 'ArrowDown':
                 case 's':
                 case 'S':
-                    if (velocity.y === 0) nextVelocity = { x: 0, y: 1 };
+                    handleDirection('ArrowDown');
                     break;
                 case 'ArrowLeft':
                 case 'a':
                 case 'A':
-                    if (velocity.x === 0) nextVelocity = { x: -1, y: 0 };
+                    handleDirection('ArrowLeft');
                     break;
                 case 'ArrowRight':
                 case 'd':
                 case 'D':
-                    if (velocity.x === 0) nextVelocity = { x: 1, y: 0 };
+                    handleDirection('ArrowRight');
                     break;
             }
         }
